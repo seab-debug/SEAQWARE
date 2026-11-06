@@ -1,4 +1,5 @@
 #include "display.h"
+#include "core/screensaver.h"
 #include "core/wifi/webInterface.h" // for server
 #include "core/wifi/wg.h"           //for isConnectedWireguard to print wireguard lock
 #include "mykeyboard.h"
@@ -565,6 +566,14 @@ int loopOptions(
     while (1) {
         // Check for shutdown before drawing menu to avoid drawing a black bar on the screen
         if (exit) break;
+        // Idle screensaver (SEAQWARE): plays SD:/SEAQUI/screensaver.gif, then repaint this menu
+        if (runScreensaverIfIdle()) {
+            drawMainBorder();
+            if (menuType == MENU_TYPE_MAIN) drawStatusBar();
+            redraw = true;
+            firstRender = true;
+            continue;
+        }
         if (menuType == MENU_TYPE_MAIN) {
             checkReboot();
             if (devModeCounter >= 5 && !bruceConfig.devMode) {
