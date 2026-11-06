@@ -105,7 +105,7 @@ uint32_t freeCallback(cmd *c) {
 }
 
 uint32_t infoCallback(cmd *c) {
-    serialDevice->print("Bruce v");
+    serialDevice->print("SEAQWARE v");
     serialDevice->println(BRUCE_VERSION);
     serialDevice->println(GIT_COMMIT_HASH);
     serialDevice->print("SDK: ");
@@ -133,7 +133,7 @@ uint32_t infoCallback(cmd *c) {
 }
 
 uint32_t helpCallback(cmd *c) {
-    serialDevice->print("Bruce v");
+    serialDevice->print("SEAQWARE v");
     serialDevice->print(BRUCE_VERSION);
     serialDevice->print("\nThese shell commands are defined internally.\n");
 
