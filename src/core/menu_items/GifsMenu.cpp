@@ -7,6 +7,11 @@
 #if !defined(LITE_VERSION)
 static const char *GIF_DIRS[] = {"/SEAQUI/gifs", "/gifs"};
 
+// Each GIF plays at least this long (whole loops), then the next one starts.
+static const unsigned long GIF_MIN_MS = 6000;
+// Long GIFs move on after this, even mid-loop.
+static const unsigned long GIF_MAX_MS = 20000;
+
 static void listGifs(FS *fs, const char *dir, std::vector<String> &out) {
     if (!fs->exists(dir)) return;
     File root = fs->open(dir);
@@ -20,34 +25,16 @@ static void listGifs(FS *fs, const char *dir, std::vector<String> &out) {
         if (name.startsWith(".")) continue;
         String lower = name;
         lower.toLowerCase();
+        if (lower.startsWith("screensaver")) continue; // the screensaver GIF is not part of the playlist
         if (lower.endsWith(".gif")) out.push_back(fullPath);
     }
     root.close();
     std::sort(out.begin(), out.end());
 }
-
-static String gifTitle(const String &path) {
-    String name = path.substring(path.lastIndexOf('/') + 1);
-    int dot = name.lastIndexOf('.');
-    if (dot > 0) name = name.substring(0, dot);
-    name.replace('_', ' ');
-    name.toUpperCase();
-    return name;
-}
-
-static void drawLabel(const String &title, int idx, int total, bool paused) {
-    const int barH = 16;
-    tft.fillRect(0, tftHeight - barH, tftWidth, barH, bruceConfig.bgColor);
-    tft.drawFastHLine(0, tftHeight - barH, tftWidth, bruceConfig.priColor);
-    tft.setTextSize(1);
-    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-    String left = (paused ? String("|| ") : String("")) + title;
-    tft.drawString(left, 6, tftHeight - barH + 5);
-    String right = String(idx + 1) + "/" + String(total);
-    tft.drawRightString(right, tftWidth - 6, tftHeight - barH + 5, 1);
-}
 #endif
 
+// Plays every GIF one after another, full screen, no labels.
+// Rotate = skip forward/back, Back = return to the main menu.
 void GifsMenu::optionsMenu() {
 #if !defined(LITE_VERSION)
     FS *fs = nullptr;
@@ -73,29 +60,31 @@ void GifsMenu::optionsMenu() {
 
     const int total = gifs.size();
     int idx = 0;
+    int failures = 0;
     bool exitPage = false;
 
     while (!exitPage) {
         tft.fillScreen(bruceConfig.bgColor);
         Gif gif;
         if (!gif.openGIF(fs, gifs[idx].c_str())) {
-            displayError("Can't open " + gifTitle(gifs[idx]), true);
+            log_e("Can't open GIF %s", gifs[idx].c_str());
             idx = (idx + 1) % total;
-            if (total == 1) break;
+            if (++failures >= total) {
+                displayError("Can't open GIFs", true);
+                break;
+            }
             continue;
         }
+        failures = 0;
 
         int x = max(0, (tftWidth - gif.getCanvasWidth()) / 2);
         int y = max(0, (tftHeight - gif.getCanvasHeight()) / 2);
-        String title = gifTitle(gifs[idx]);
-        bool paused = false;
-
-        // Show the name briefly, then clear it so the GIF plays full screen.
-        drawLabel(title, idx, total, false);
-        unsigned long labelUntil = millis() + 1500;
+        unsigned long start = millis();
 
         while (true) {
-            if (check(EscPress)) {
+            previousMillis = millis(); // watching GIFs counts as activity: don't dim or start the screensaver
+
+            if (check(EscPress) || check(SelPress)) {
                 exitPage = true;
                 break;
             }
@@ -107,31 +96,18 @@ void GifsMenu::optionsMenu() {
                 idx = (idx - 1 + total) % total;
                 break;
             }
-            if (check(SelPress)) {
-                paused = !paused;
-                drawLabel(title, idx, total, paused);
-                labelUntil = paused ? 0 : millis() + 1200;
-            }
 
-            if (labelUntil && millis() > labelUntil) {
-                // Clear the label and restart the GIF so no leftover pixels stay on screen.
-                tft.fillScreen(bruceConfig.bgColor);
-                gif.reset();
-                labelUntil = 0;
-            }
-
-            if (paused) {
-                vTaskDelay(20 / portTICK_PERIOD_MS);
-                continue;
-            }
-
-            int result = gif.playFrame(x, y); // loops back to the first frame on its own
+            int result = gif.playFrame(x, y); // returns 0 after the last frame, then loops
+            unsigned long elapsed = millis() - start;
             if (result < 0) {
                 log_e("GIF playFrame error: %d", gif.getLastError());
-                gif.reset();
-                vTaskDelay(20 / portTICK_PERIOD_MS);
+                idx = (idx + 1) % total;
+                break;
             }
-            if (labelUntil) drawLabel(title, idx, total, false); // keep the label on top while visible
+            if ((result == 0 && elapsed >= GIF_MIN_MS) || elapsed >= GIF_MAX_MS) {
+                idx = (idx + 1) % total;
+                break;
+            }
         }
         // gif is closed and freed by its destructor at the end of this scope
     }
