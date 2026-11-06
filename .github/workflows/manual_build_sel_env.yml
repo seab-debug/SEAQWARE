@@ -150,8 +150,8 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Bruce-${{ env.SELECTED_ENV }}
-          path: Bruce-*.*
+          name: SEAQ-${{ env.SELECTED_ENV }}
+          path: SEAQ-*.*
           retention-days: 1
           if-no-files-found: error
 
@@ -162,4 +162,4 @@ jobs:
           echo "Version: ${{ steps.prepare_version.outputs.VERSION }}"
           echo "Git Hash: $(git describe --always --dirty)"
           echo "Built files:"
-          ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
+          ls -la SEAQ-*.* 2>/dev/null || echo "No SEAQ files found"
