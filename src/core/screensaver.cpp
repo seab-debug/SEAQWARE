@@ -1,6 +1,7 @@
 #include "screensaver.h"
 #include "core/display.h"
 #include "core/settings.h"
+#include "core/seaq_gifs.h"
 #include <globals.h>
 
 #if !defined(LITE_VERSION)
@@ -47,12 +48,16 @@ bool runScreensaverIfIdle() {
         bruceConfig.dimmerSet > 0 ? (unsigned long)bruceConfig.dimmerSet * 1000UL : SCREENSAVER_FALLBACK_IDLE_MS;
     if (millis() - previousMillis < idleMs) return false;
 
+    // A screensaver.gif on the SD card / LittleFS overrides the one built into the firmware.
     FS *fs = nullptr;
     const char *path = nullptr;
-    if (!findScreensaver(fs, path)) return false; // no file: normal dimming behaviour
-
     Gif gif;
-    if (!gif.openGIF(fs, path)) return false;
+    if (findScreensaver(fs, path)) {
+        if (!gif.openGIF(fs, path)) return false;
+    } else {
+        if (SEAQ_SCREENSAVER.data == nullptr) return false; // nothing to show: normal dimming behaviour
+        if (!gif.openGIF(SEAQ_SCREENSAVER.data, (int)SEAQ_SCREENSAVER.size)) return false;
+    }
 
     // Undo any dimming that already started, and keep the screen awake while it plays.
     previousMillis = millis();

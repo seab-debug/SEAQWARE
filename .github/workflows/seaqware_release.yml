@@ -1,0 +1,82 @@
+name: SEAQWARE Release
+# Builds SEAQWARE for the LilyGO T-Embed CC1101 and publishes it as a GitHub Release.
+# Run it from the Actions tab: "SEAQWARE Release" -> Run workflow -> enter a version like v1.0
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (tag), e.g. v1.0"
+        required: true
+        default: "v1.0"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish ${{ github.event.inputs.version }}
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: lilygo-t-embed-cc1101
+      VERSION: ${{ github.event.inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio/libdeps
+          key: ${{ runner.os }}-seaq-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-seaq-pio-
+
+      - name: Install tools
+        run: |
+          pip install requests esptool intelhex
+          pip install platformio
+
+      - name: Set version
+        run: |
+          sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"$VERSION\"' ; /g" ./platformio.ini
+          sed -i "s/-DGIT_COMMIT_HASH='\"Homebrew\"'/!echo '-DGIT_COMMIT_HASH=\\\\\"'\$(git describe --always --dirty)'\\\\\"'/g" ./platformio.ini
+
+      - name: Build
+        run: |
+          set -o pipefail
+          python tools/embed_seaq_gifs.py
+          platformio run -e "$ENV_NAME" | tee build.log
+          ls -la SEAQ-*.bin
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<NOTES
+          ## SEAQWARE $VERSION for LilyGO T-Embed CC1101
+
+          Custom build of [Bruce](https://github.com/BruceDevices/firmware) with:
+          - **GIFs** page in the main menu: plays 15 built-in serpent animations full screen (plus any extra GIFs in \`SD:/SEAQUI/gifs\`)
+          - **Idle screensaver**: the sleeping serpent plays full screen when the device sits idle (a \`SD:/SEAQUI/screensaver.gif\` overrides it)
+          - SEAQWARE branding
+
+          ### Flash it (no SD card needed)
+          1. Download **SEAQ-lilygo-t-embed-cc1101.bin** below.
+          2. Plug the T-Embed into your computer and open https://espressif.github.io/esptool-js/ in Chrome or Edge.
+          3. Baudrate **921600** -> **Connect** -> pick the port. (If it won't connect: hold **BOOT** while plugging it in.)
+          4. Flash Address **0x0**, choose the .bin, click **Program**. Don't use Erase Flash.
+          5. Unplug and replug when it finishes.
+
+          Built from commit ${GITHUB_SHA::7}. Licensed AGPL-3.0, like Bruce.
+          NOTES
+          gh release create "$VERSION" "SEAQ-${ENV_NAME}.bin" \
+            --target "$GITHUB_SHA" \
+            --title "SEAQWARE $VERSION" \
+            --notes-file notes.md

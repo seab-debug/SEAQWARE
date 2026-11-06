@@ -1,6 +1,7 @@
 #include "GifsMenu.h"
 #include "core/display.h"
 #include "core/sd_functions.h"
+#include "core/seaq_gifs.h"
 #include <algorithm>
 #include <vector>
 
@@ -33,32 +34,51 @@ static void listGifs(FS *fs, const char *dir, std::vector<String> &out) {
 }
 #endif
 
+// One playlist entry: a GIF built into the firmware, or a file on the SD card / LittleFS.
+#if !defined(LITE_VERSION)
+struct GifEntry {
+    const EmbeddedGif *builtin; // non-null for built-in GIFs
+    FS *fs;
+    String path;
+};
+
+static bool openEntry(Gif &gif, const GifEntry &e) {
+    if (e.builtin) return gif.openGIF(e.builtin->data, (int)e.builtin->size);
+    return gif.openGIF(e.fs, e.path.c_str());
+}
+#endif
+
 // Plays every GIF one after another, full screen, no labels.
-// Rotate = skip forward/back, Back = return to the main menu.
+// Built-in SEAQWARE GIFs first, then any extra GIFs from SD:/SEAQUI/gifs (or SD:/gifs, LittleFS:/gifs).
+// Rotate = skip forward/back, Back or Select = return to the main menu.
 void GifsMenu::optionsMenu() {
 #if !defined(LITE_VERSION)
-    FS *fs = nullptr;
-    std::vector<String> gifs;
+    std::vector<GifEntry> playlist;
+    for (int i = 0; i < SEAQ_GIFS_COUNT; i++) playlist.push_back({&SEAQ_GIFS[i], nullptr, ""});
 
+    std::vector<String> files;
+    FS *fs = nullptr;
     if (sdcardMounted) {
         for (const char *dir : GIF_DIRS) {
-            listGifs(&SD, dir, gifs);
-            if (!gifs.empty()) {
+            listGifs(&SD, dir, files);
+            if (!files.empty()) {
                 fs = &SD;
                 break;
             }
         }
     }
-    if (gifs.empty()) {
-        listGifs(&LittleFS, "/gifs", gifs);
-        if (!gifs.empty()) fs = &LittleFS;
+    if (files.empty()) {
+        listGifs(&LittleFS, "/gifs", files);
+        if (!files.empty()) fs = &LittleFS;
     }
-    if (gifs.empty()) {
-        displayWarning("No GIFs in SD:/SEAQUI/gifs", true);
+    for (const String &f : files) playlist.push_back({nullptr, fs, f});
+
+    if (playlist.empty()) {
+        displayWarning("No GIFs found", true);
         return;
     }
 
-    const int total = gifs.size();
+    const int total = playlist.size();
     int idx = 0;
     int failures = 0;
     bool exitPage = false;
@@ -66,8 +86,8 @@ void GifsMenu::optionsMenu() {
     while (!exitPage) {
         tft.fillScreen(bruceConfig.bgColor);
         Gif gif;
-        if (!gif.openGIF(fs, gifs[idx].c_str())) {
-            log_e("Can't open GIF %s", gifs[idx].c_str());
+        if (!openEntry(gif, playlist[idx])) {
+            log_e("Can't open GIF #%d", idx);
             idx = (idx + 1) % total;
             if (++failures >= total) {
                 displayError("Can't open GIFs", true);

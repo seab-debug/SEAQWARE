@@ -1,3 +1,19 @@
+# SEAQWARE
+
+**SEAQWARE** is a custom build of [Bruce](https://github.com/BruceDevices/firmware) for the **LilyGO T-Embed CC1101**.
+
+What's different from Bruce:
+- **GIFs page** in the main menu: plays 15 built-in serpent animations full screen, one after another (rotate to skip, press to exit). Extra GIFs in `SD:/SEAQUI/gifs` are added to the playlist.
+- **Idle screensaver**: a sleeping serpent plays full screen when the device sits in a menu. Put your own `SD:/SEAQUI/screensaver.gif` to replace it.
+- SEAQWARE branding on the boot screen, About screen, web UI and device names.
+
+**Download:** grab `SEAQ-lilygo-t-embed-cc1101.bin` from the [Releases page](../../releases), then flash it at address `0x0` with [esptool-js](https://espressif.github.io/esptool-js/) in Chrome or Edge. No SD card needed.
+
+The GIFs live in `embedded_resources/seaq_gifs/`; after changing them run `python3 tools/embed_seaq_gifs.py`.
+Everything below is Bruce's original README. SEAQWARE is licensed AGPL-3.0, like Bruce.
+
+---
+
 ![Bruce Main Menu](./media/pictures/bruce_banner.jpg)
 
 # :shark: Bruce
