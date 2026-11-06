@@ -1599,6 +1599,17 @@ bool Gif::openGIF(FS *fs, const char *filename) {
     return false;
 }
 
+bool Gif::openGIF(const uint8_t *data, int size) {
+    if (data == nullptr || size <= 0) return false;
+    gif = new AnimatedGIF();
+    gif->begin(BIG_ENDIAN_PIXELS);
+    // ESP32 flash is memory-mapped, so the library can read the data in place.
+    if (gif->open(const_cast<uint8_t *>(data), size, GIFDraw)) { return true; }
+
+    log_e("GIF opening error: %d\n", gif->getLastError());
+    return false;
+}
+
 // Play a single frame
 // returns:
 // 2 = skipped waiting for another frame

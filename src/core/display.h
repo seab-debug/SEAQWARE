@@ -47,6 +47,9 @@ public:
 
     bool openGIF(FS *fs, const char *filename);
 
+    // Open a GIF stored in flash/RAM (used for the GIFs built into SEAQWARE)
+    bool openGIF(const uint8_t *data, int size);
+
     int playFrame(int x = 0, int y = 0, bool bSync = true);
 
     int getInfo(GIFINFO *pInfo) { return gif->getInfo(pInfo); }
