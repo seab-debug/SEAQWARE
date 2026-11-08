@@ -1,5 +1,7 @@
 # SEAQWARE
 
+> ⚠️ **Don't flash v1.0 or v1.1 for now.** After flashing, a T-Embed CC1101 stayed on a black screen. A fixed release is coming. If your device is stuck, flash official Bruce from https://bruce.computer/flasher (hold the knob down while plugging in USB if it won't connect).
+
 **SEAQWARE** is a custom build of [Bruce](https://github.com/BruceDevices/firmware) for the **LilyGO T-Embed CC1101**.
 
 What's different from Bruce:
