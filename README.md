@@ -1,5 +1,7 @@
 # SEAQWARE
 
+> ⚠️ **v1.0 and v1.1 do not boot** — the firmware was larger than the app partition. Use **v1.2 or newer**. If your device is stuck on a black screen after flashing v1.0/v1.1, just flash v1.2 (hold the knob while plugging in USB if it won't connect).
+
 **SEAQWARE** is a custom build of [Bruce](https://github.com/BruceDevices/firmware) for the **LilyGO T-Embed CC1101**.
 
 What's different from Bruce:

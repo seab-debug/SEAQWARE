@@ -1,0 +1,7 @@
+# SEAQWARE partition table for 16MB boards (T-Embed CC1101)
+# Bigger app slot than Bruce's custom_16Mb.csv (0x470000 -> 0x700000) so the built-in GIFs fit.
+# Name,     Type, SubType,   Offset,   Size,    Flags
+nvs,        data, nvs,       0x9000,   0x6000,
+factory,    app,  factory,   0x10000,  0x700000,
+spiffs,     data, spiffs,    0x710000, 0x8E0000,
+coredump,   data, coredump,  0xFF0000, 0x10000,
