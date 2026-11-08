@@ -24,6 +24,11 @@ public:
     virtual const String& themePath() = 0;
 
     bool checkTheme() { return hasTheme() && themePath().length() > 0; }
+
+    // Items that take over the screen while highlighted in the main menu (e.g. the GIFs page).
+    // onHover() runs instead of draw() and returns when the user scrolls away.
+    virtual bool playsOnHover() { return false; }
+    virtual void onHover() {}
     String getName() const { return String(_name); }
 
     void draw(float scale = 1) {

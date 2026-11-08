@@ -3,7 +3,7 @@
 **SEAQWARE** is a custom build of [Bruce](https://github.com/BruceDevices/firmware) for the **LilyGO T-Embed CC1101**.
 
 What's different from Bruce:
-- **GIFs page** in the main menu: plays 15 built-in serpent animations full screen, one after another (rotate to skip, press to exit). Extra GIFs in `SD:/SEAQUI/gifs` are added to the playlist.
+- **GIFs page** in the main menu: starts playing 30 built-in serpent animations full screen as soon as you scroll onto it (press to skip, rotate to move on). Extra GIFs in `SD:/SEAQUI/gifs` are added to the playlist.
 - **Idle screensaver**: a sleeping serpent plays full screen when the device sits in a menu. Put your own `SD:/SEAQUI/screensaver.gif` to replace it.
 - SEAQWARE branding on the boot screen, About screen, web UI and device names.
 
