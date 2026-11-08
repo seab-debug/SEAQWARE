@@ -1,5 +1,6 @@
 #include "GifsMenu.h"
 #include "core/display.h"
+#include "core/mykeyboard.h"
 #include "core/sd_functions.h"
 #include "core/seaq_gifs.h"
 #include <algorithm>
@@ -48,10 +49,17 @@ static bool openEntry(Gif &gif, const GifEntry &e) {
 }
 #endif
 
+// Highlighting GIFs in the main menu starts playback right away (no separate screen).
+void GifsMenu::onHover() { play(true); }
+
+// Opened directly (touch screens, remote control): same player, Back/press exits.
+void GifsMenu::optionsMenu() { play(false); }
+
 // Plays every GIF one after another, full screen, no labels.
 // Built-in SEAQWARE GIFs first, then any extra GIFs from SD:/SEAQUI/gifs (or SD:/gifs, LittleFS:/gifs).
-// Rotate = skip forward/back, Back or Select = return to the main menu.
-void GifsMenu::optionsMenu() {
+//  - from the menu: rotate/back leave (the menu then moves as usual), press skips to the next GIF
+//  - opened directly: rotate skips, back/press return to the menu
+void GifsMenu::play(bool fromMenuHover) {
 #if !defined(LITE_VERSION)
     std::vector<GifEntry> playlist;
     for (int i = 0; i < SEAQ_GIFS_COUNT; i++) playlist.push_back({&SEAQ_GIFS[i], nullptr, ""});
@@ -74,25 +82,23 @@ void GifsMenu::optionsMenu() {
     for (const String &f : files) playlist.push_back({nullptr, fs, f});
 
     if (playlist.empty()) {
-        displayWarning("No GIFs found", true);
+        if (!fromMenuHover) displayWarning("No GIFs found", true);
+        else draw();
         return;
     }
 
     const int total = playlist.size();
-    int idx = 0;
+    if (_idx >= total || _idx < 0) _idx = 0;
     int failures = 0;
-    bool exitPage = false;
+    bool leave = false;
 
-    while (!exitPage) {
+    while (!leave) {
         tft.fillScreen(bruceConfig.bgColor);
         Gif gif;
-        if (!openEntry(gif, playlist[idx])) {
-            log_e("Can't open GIF #%d", idx);
-            idx = (idx + 1) % total;
-            if (++failures >= total) {
-                displayError("Can't open GIFs", true);
-                break;
-            }
+        if (!openEntry(gif, playlist[_idx])) {
+            log_e("Can't open GIF #%d", _idx);
+            _idx = (_idx + 1) % total;
+            if (++failures >= total) break;
             continue;
         }
         failures = 0;
@@ -104,28 +110,41 @@ void GifsMenu::optionsMenu() {
         while (true) {
             previousMillis = millis(); // watching GIFs counts as activity: don't dim or start the screensaver
 
-            if (check(EscPress) || check(SelPress)) {
-                exitPage = true;
-                break;
-            }
-            if (check(NextPress)) {
-                idx = (idx + 1) % total;
-                break;
-            }
-            if (check(PrevPress)) {
-                idx = (idx - 1 + total) % total;
-                break;
+            if (fromMenuHover) {
+                checkReboot(); // keep the power button working like on the rest of the main menu
+                // Leave the presses set so the main menu handles them (move to next/prev item).
+                if (NextPress || PrevPress || EscPress) {
+                    leave = true;
+                    break;
+                }
+                if (check(SelPress)) {
+                    _idx = (_idx + 1) % total;
+                    break;
+                }
+            } else {
+                if (check(EscPress) || check(SelPress)) {
+                    leave = true;
+                    break;
+                }
+                if (check(NextPress)) {
+                    _idx = (_idx + 1) % total;
+                    break;
+                }
+                if (check(PrevPress)) {
+                    _idx = (_idx - 1 + total) % total;
+                    break;
+                }
             }
 
             int result = gif.playFrame(x, y); // returns 0 after the last frame, then loops
             unsigned long elapsed = millis() - start;
             if (result < 0) {
                 log_e("GIF playFrame error: %d", gif.getLastError());
-                idx = (idx + 1) % total;
+                _idx = (_idx + 1) % total;
                 break;
             }
             if ((result == 0 && elapsed >= GIF_MIN_MS) || elapsed >= GIF_MAX_MS) {
-                idx = (idx + 1) % total;
+                _idx = (_idx + 1) % total;
                 break;
             }
         }
@@ -133,7 +152,8 @@ void GifsMenu::optionsMenu() {
     }
     tft.fillScreen(bruceConfig.bgColor);
 #else
-    displayWarning("GIFs not available in Lite", true);
+    if (!fromMenuHover) displayWarning("GIFs not available in Lite", true);
+    else draw();
 #endif
 }
 

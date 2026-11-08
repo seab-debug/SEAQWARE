@@ -63,7 +63,7 @@ jobs:
           ## SEAQWARE $VERSION for LilyGO T-Embed CC1101
 
           Custom build of [Bruce](https://github.com/BruceDevices/firmware) with:
-          - **GIFs** page in the main menu: plays 15 built-in serpent animations full screen (plus any extra GIFs in \`SD:/SEAQUI/gifs\`)
+          - **GIFs** page in the main menu: plays 30 built-in serpent animations full screen as soon as you scroll onto it (plus any extra GIFs in \`SD:/SEAQUI/gifs\`)
           - **Idle screensaver**: the sleeping serpent plays full screen when the device sits idle (a \`SD:/SEAQUI/screensaver.gif\` overrides it)
           - SEAQWARE branding
 

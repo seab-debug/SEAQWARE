@@ -53,9 +53,14 @@ void MainMenu::begin(void) {
                  false,                                  // selected = false
                  [](void *menuItem, bool shouldRender) { // render lambda
                      if (!shouldRender) return false;
+                     MenuItemInterface *obj = static_cast<MenuItemInterface *>(menuItem);
+                     if (obj->playsOnHover()) {
+                         obj->onHover();         // plays until the user scrolls away
+                         drawMainBorder(true);   // clean screen for the next item
+                         return true;
+                     }
                      drawMainBorder(false);
 
-                     MenuItemInterface *obj = static_cast<MenuItemInterface *>(menuItem);
                      float scale = float((float)tftWidth / (float)240);
                      if (bruceConfigPins.rotation & 0b01) scale = float((float)tftHeight / (float)135);
                      obj->draw(scale);
